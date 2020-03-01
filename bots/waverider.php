@@ -32,11 +32,11 @@ $args = getArgs(array('p','bw','g','sim','nib','pv','fip'));
 if(!$args['p'] || !$args['bw'] || !$args['g'] || !$args['pv'] || ($args['fip'] && !$args['nib']))
     exit(renderUsage());
 
-$a = explode('-',$args['p']);
-$crypto=$a[0];
-$currency=$a[1];
+$a          = explode('-',$args['p']);
+$crypto     = $a[0];
+$currency   = $a[1];
 
-$sellworth = round(($args['bw']*($args['g']/100))+$args['bw'],2);
+$sellworth  = round(($args['bw'] * ($args['g']/100)) + $args['bw'],2);
 
 // print details to user
 
@@ -51,8 +51,8 @@ echo " [i] After selling I will wait for $crypto to drop by {$args['pv']}% befor
 echo "\n ====== BOT STARTING ====== \n\n";
 
 $g->updatePrices($args['p']);
-$buyprice = $args['fip']?$args['fip']:$g->lastaskprice;
-$coins = round((1/$buyprice)*$args['bw'],7);
+$buyprice   = $args['fip']?$args['fip']:$g->lastaskprice;
+$coins      = round((1/$buyprice)*$args['bw'],7);
 echo " [i] {$args['bw']} $currency currently is $coins $crypto\n";
 
 if(!$args['nib'])
@@ -72,22 +72,28 @@ if(!$args['nib'])
 while(1)
 {
     $g->updatePrices($args['p']);
-    $sellprice = $g->lastbidprice*$coins;
-    $profit = round($sellprice - $args['bw'],2);
+
+    $sellprice  = $g->lastbidprice * $coins;
+    $profit     = round($sellprice - $args['bw'],2);
+
     echo " Current worth: $sellprice\t Change: ".($profit > 0?'+':'')."$profit $currency\t\t\t\r";
-    if($sellprice >= $sellworth)
+    echo " Trend slope: $g->trendslope\t\t\t\r";
+    
+    if($g->trendslope > 0 && $sellprice >= $sellworth)
     {
+        // Recalculate PV
+        $args['pv'] = $args['g'] / $g->trendslope;
+
         echo "\n [!!] Coins gained {$args['g']}%, will sell now for $sellprice. Made $profit $currency profit!\n";
         if(!$args['sim'])
             $data = $g->marketSellCrypto($coins,$args['p']);
         
-        $coins = round((1/$g->lastaskprice)*$args['bw'],7);
-
-        $waitingforprice = round($g->lastbidprice-($g->lastbidprice*($args['pv']/100)),2);
+        $coins              = round((1/$g->lastaskprice)*$args['bw'],7);
+        $waitingforprice    = round($g->lastbidprice-($g->lastbidprice*($args['pv']/100)),2);
 
         echo "  [!] Entering re-buy loop. Waiting for the crypto price to drop by {$args['pv']}% to $waitingforprice $currency per $crypto!\n";
 
-        $starttime = time();
+        $starttime          = time();
         while($g->lastbidprice > $waitingforprice)
         {
             $g->updatePrices($args['p']);
@@ -117,8 +123,8 @@ while(1)
                     sleep(60);
                 }
             }
-            $data = $g->marketBuyCurrency($args['bw'],$args['p']);
-            $coins = round((1/$g->lastaskprice)*$args['bw'],7);
+            $data   = $g->marketBuyCurrency($args['bw'],$args['p']);
+            $coins  = round((1/$g->lastaskprice)*$args['bw'],7);
         }
             
     }

@@ -13,19 +13,21 @@ include_once(ROOT.DS.'config.inc.php');
 */
 class gdax 
 {
-    private $apiurl = "https://api.gdax.com";
+    private $apiurl         = "https://api.gdax.com";
     private $key;
     private $secret;
     private $passphrase;
-    public $accounts;
+    public  $accounts;
     
     private $bidsprices;
-    public $lastbidprice=0;
-    private $lowestbids=99999;
+    public  $lastbidprice   = 0;
+    public  $trendangle     = 0;
+    public  $trendslope     = 0;
+    private $lowestbids     = 99999;
     
     private $askprices;
-    public $lastaskprice=0;
-    private $highestask=0;
+    public  $lastaskprice   = 0;
+    private $highestask     = 0;
 
     public function __construct($key, $secret, $passphrase, $sandbox=false) {
         $this->key = $key;
@@ -61,10 +63,24 @@ class gdax
 
         $data = $this->makeRequest('/products/'.$product.'/stats');
 
-        $out['24h_low'] = $data['low'];
-        $out['24h_high'] = $data['high'];
-        $out['24h_open'] = $data['open'];
+        $out['24h_low']     = $data['low'];
+        $out['24h_high']    = $data['high'];
+        $out['24h_open']    = $data['open'];
         $out['24h_average'] = round(($data['low']+$data['high'])/2,2);
+
+        $data   = $this->makeRequest('/products/'.$product.'/candles');
+        $y      = [];
+        $x      = [];
+        $t      = "";
+        foreach($data as $i => $candle){
+            $y[] = $candle[4]; // Price at candle close
+            // $x[] = isset($x[$i-1]) ? $x[$i-1] + 60 : 60;
+
+            // $t .= (isset($x[$i-1]) ? $x[$i-1] + 60 : 60) . "," . $candle[4] . "\n";
+        }
+
+        $this->trendangle = array_shift(trader_linearreg_angle($y,count($y)));
+        $this->trendslope = array_shift(trader_linearreg_slope($y,count($y)));
 
         return $out;
     }
@@ -269,4 +285,30 @@ function productStringToArr($string)
 
 function startsWith($a, $b) { 
     return strpos($a, $b) === 0;
+}
+
+function linear_regression( $x, $y ) {
+ 
+    $n     = count($x);     // number of items in the array
+    $x_sum = array_sum($x); // sum of all X values
+    $y_sum = array_sum($y); // sum of all Y values
+ 
+    $xx_sum = 0;
+    $xy_sum = 0;
+ 
+    for($i = 0; $i < $n; $i++) {
+        $xy_sum += ( $x[$i]*$y[$i] );
+        $xx_sum += ( $x[$i]*$x[$i] );
+    }
+ 
+    // Slope
+    $slope = ( ( $n * $xy_sum ) - ( $x_sum * $y_sum ) ) / ( ( $n * $xx_sum ) - ( $x_sum * $x_sum ) );
+ 
+    // calculate intercept
+    $intercept = ( $y_sum - ( $slope * $x_sum ) ) / $n;
+ 
+    return array( 
+        'slope'     => $slope,
+        'intercept' => $intercept,
+    );
 }
