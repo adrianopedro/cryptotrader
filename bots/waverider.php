@@ -82,7 +82,7 @@ while(1)
     if($g->trendslope > 0 && $sellprice >= $sellworth)
     {
         // Recalculate PV
-        $args['pv'] = $args['g'] / $g->trendslope;
+        $args['pv'] = sqrt(($args['g'] / $g->trendslope) * ($args['g'] / $g->trendslope));
 
         echo "\n [!!] Coins gained {$args['g']}%, will sell now for $sellprice. Made $profit $currency profit!\n";
         if(!$args['sim'])
